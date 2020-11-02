@@ -8,14 +8,19 @@
 import SwiftUI
 
 struct ContentView: View {
+  @State private var selectedTab: Int = 1
+  
     var body: some View {
-        Text("Hello, world!")
-            .padding()
+      TabView(selection: $selectedTab,
+              content:  {
+                ImageTranscodingView().tabItem { Text("Transcoding") }.tag(1)
+              })
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {
         ContentView()
+          .preferredColorScheme(.dark)
     }
 }
