@@ -9,18 +9,16 @@
 import SwiftUI
 import SDWebImage
 import SDWebImageSwiftUI
-//import AVFoundation
-
 
 // MARK: - ImageTranscodingView
 struct ImageTranscodingView: View {
-  //  @State private var textInput: String = ""
+  
   @State private var url: URL = TestData.gif12FPS
   @State private var inputImageData: Data?
   @State private var outputImageData: Data?
   @State private var outputImage: SDAnimatedImage?
   
-  @State private var conversionSuccess: String = "Give it a try!"
+  @State private var conversionSuccess: String = "Select image from top!"
   
   init() {
     let url = self.url
@@ -43,7 +41,7 @@ struct ImageTranscodingView: View {
         .padding(.horizontal)
         
         AnimatedImageInfoView(data: $inputImageData)
-
+        
         HStack {
           Text("Convert to: ")
           Button("HEIC") { convertImage(to: .HEIC) }
@@ -63,9 +61,10 @@ struct ImageTranscodingView: View {
   }
 }
 
-// MARK: computed
+// MARK: methods
 extension ImageTranscodingView {
   private func loadImage(url: URL) {
+    self.url = url
     self.inputImageData = try! Data(contentsOf: url)
   }
   
@@ -86,58 +85,58 @@ extension ImageTranscodingView {
   }
 }
 
-// MARK: - SDAnimatedImage+Properties
-extension SDAnimatedImage {
-  //  var frames: [SDImageFrame]? {
-  //    guard let images = self.images else { return nil }
-  //    let count = Int(self.animatedImageFrameCount)
-  //
-  //    let frames = (0..<count).map { index in
-  //      SDImageFrame(image: images[index], duration: self.durations[index])
-  //    }
-  //    return frames
-  //  }
-  //
-  //  open override var images: [UIImage]? {
-  //    let retrievedImages = (0..<self.animatedImageFrameCount)
-  //      .map { self.animatedImageFrame(at: $0) ?? nil }
-  //      .compactMap{ $0 }
-  //
-  //    if retrievedImages.count == self.animatedImageFrameCount {
-  //      return retrievedImages
-  //    } else {
-  //      return nil
-  //    }
-  //  }
-  //
-  //  var durations: Array<TimeInterval> {
-  //    (0..<self.animatedImageFrameCount).map {
-  //      self.animatedImageDuration(at: $0)
-  //    }
-  //  }
+// MARK: - AnimatedImageInfoView
+struct AnimatedImageInfoView: View {
+  @Binding var data: Data?
+  private var infoString: String {
+    imageInfo(imageData: data)
+  }
   
-  var totalDuration: TimeInterval {
-    (0..<self.animatedImageFrameCount).reduce(0) {
-      $0 + self.animatedImageDuration(at: $1)
+  var body: some View {
+    HStack {
+      if data != nil {
+        AnimatedImage(data: data!, isAnimating: Binding.constant(true))
+          .maxBufferSize(.max)
+          .playbackRate(1)
+          .resizable()
+          .scaledToFit()
+        
+      } else {
+        Image(systemName: "questionmark.square")
+          .resizable()
+          .font(Font.title.weight(.ultraLight))
+          .scaledToFit()
+      }
+      
+      Text(infoString)
+        .padding()
+      
+      Spacer()
     }
+    .padding(.horizontal)
   }
-  
-  var avgFPS: Double {
-    Double(self.animatedImageFrameCount) / self.totalDuration
-  }
-  
-  //  var avgFrameDuration: TimeInterval {
-  //    1.0 / avgFPS
-  //  }
-  
-  //  var minDuration: TimeInterval? { durations.min() }
-  //  var maxDuration: TimeInterval? { durations.max() }
-  //
-  //  var hasConstantFramerate: Bool {
-  //    minDuration != nil && minDuration == maxDuration
-  //  }
 }
 
+// MARK: methods
+extension AnimatedImageInfoView {
+  func imageInfo(imageData: Data?) -> String {
+    guard imageData != nil else { return "" }
+    if let animatedImage = SDAnimatedImage(data: imageData!) {
+      let format = animatedImage.animatedImageFormat.name
+      let frameCount = animatedImage.animatedImageFrameCount.description
+      let duration = String(format: "%.2f", animatedImage.totalDuration)
+      let fps = String(format: "%.2f", animatedImage.avgFPS)
+      let spf = String(format: "%.3f", animatedImage.avgFrameDuration)
+      let width = Int(animatedImage.size.width)
+      let height = Int(animatedImage.size.height)
+      
+      let infoString: String = "\(format) format \n\(frameCount) frames \n\(duration) sec total \n\(fps) fps \n\(spf) sec/fr \n\(width)x\(height) pix"
+      
+      return infoString
+    }
+    return ""
+  }
+}
 
 // MARK: -
 // MARK: - ImageCodingTests_Previews
@@ -148,7 +147,24 @@ struct ImageCodingTests_Previews: PreviewProvider {
   }
 }
 
-// MARK: - SDImageFormat+
+// MARK: - SDAnimatedImage+Computed
+extension SDAnimatedImage {
+  var totalDuration: TimeInterval {
+    (0..<self.animatedImageFrameCount).reduce(0) {
+      $0 + self.animatedImageDuration(at: $1)
+    }
+  }
+  
+  var avgFPS: Double {
+    Double(self.animatedImageFrameCount) / self.totalDuration
+  }
+  
+  var avgFrameDuration: TimeInterval {
+    1.0 / avgFPS
+  }
+}
+
+// MARK: - SDImageFormat+enum
 extension SDImageFormat {
   var name: String {
     switch self {
@@ -178,57 +194,9 @@ extension SDImageFormat {
   }
 }
 
-// MARK: - AnimatedImageInfoView
-struct AnimatedImageInfoView: View {
-  @Binding var data: Data?
-  private var infoString: String {
-    imageInfo(imageData: data)
-  }
-  
-  var body: some View {
-    HStack {
-      if data != nil {
-        AnimatedImage(data: data!, isAnimating: Binding.constant(true))
-          .maxBufferSize(.max)
-          .playbackRate(1)
-          .resizable()
-          .scaledToFit()
-        
-        
-      } else {
-        Image(systemName: "questionmark.square")
-          .resizable()
-          .font(Font.title.weight(.ultraLight))
-          .scaledToFit()
-      }
-      
-      
-      Text(infoString)
-        .padding()
-      
-      Spacer()
-    }
-    .padding(.horizontal)
-  }
-  
-  func imageInfo(imageData: Data?) -> String {
-    guard imageData != nil else { return "" }
-    if let animatedImage = SDAnimatedImage(data: imageData!) {
-      let format = animatedImage.animatedImageFormat.name
-      let frameCount = animatedImage.animatedImageFrameCount.description
-      let duration = String(format: "%.2f", animatedImage.totalDuration)
-      let fps = String(format: "%.2f", animatedImage.avgFPS)
-      let width = Int(animatedImage.size.width)
-      let height = Int(animatedImage.size.height)
-      
-      let infoString: String = "\(format) format \n\(frameCount) frames \n\(duration) sec \n\(fps) fps \n\(width)x\(height) pix"
-      
-      return infoString
-    }
-    return ""
-  }
-}
 
+
+// MARK: - TestData
 struct TestData {
   static let apng9FPS = URL(string: "https://static1.squarespace.com/static/551b39a7e4b0a26ceee7f942/t/5fa0650653d6171155726884/1604347151559/GrafittiWave-32fr-500p-9fps-APNG-.png")!
   static let apng12FPS = URL(string: "https://static1.squarespace.com/static/551b39a7e4b0a26ceee7f942/t/5f9ca87c5578154aa84dedf5/1604102291616/FishOutOfWater-30fr-1000p-12fps-OptimAPNGb-APNG.png")!
